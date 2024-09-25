@@ -1,0 +1,24 @@
+{
+    "name": "be_product-detail-ts",
+    "version": "1.0.0",
+    "main": "index.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "start": "ts-node src/index.ts"
+    },
+    "author": "",
+    "license": "ISC",
+    "description": "",
+    "dependencies": {
+        "cors": "^2.8.5",
+        "express": "^4.21.0",
+        "mysql": "^2.18.1"
+    },
+    "devDependencies": {
+        "@types/cors": "^2.8.17",
+        "@types/express": "^4.17.21",
+        "@types/mysql": "^2.15.26",
+        "ts-node": "^10.9.2",
+        "typescript": "^5.6.2"
+    }
+}

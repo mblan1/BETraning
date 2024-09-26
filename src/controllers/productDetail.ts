@@ -45,13 +45,13 @@ const getProductByID = async (req: Request, res: Response) => {
             }
             const { imageLinks, transferState } = result[0];
             const imageLinksArray = imageLinks.split(',');
-            const newTransferState = transferState === 1 ? 'Sẵn Sàng' : 'Chưa Sẵn Sàng';
+            const modifiedTransferState = transferState === 1 ? 'Sẵn Sàng' : 'Chưa Sẵn Sàng';
 
             return res.status(200).json({
                 data: {
                     ...result[0],
                     imageLinks: imageLinksArray,
-                    transferState: newTransferState,
+                    transferState: modifiedTransferState,
                     techInfo: techInfoData,
                 },
             });

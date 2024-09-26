@@ -1,10 +1,10 @@
 import mysql from 'mysql';
 
 const con = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: 'llanle2002',
-    database: 'besprint',
+    host: process.env.SQL_HOST,
+    user: process.env.SQL_USER,
+    password: process.env.SQL_PASSWORD,
+    database: process.env.SQL_DB,
 });
 
 const connectDatabase = () => {

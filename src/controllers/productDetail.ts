@@ -7,7 +7,7 @@ const getProductByID = async (req: Request, res: Response) => {
     try {
         let techInfoData = {};
         if (!id) {
-            return res.status(400).json({ message: 'Product ID is required' });
+            return res.status(400).json({ message: 'Product ID is required', status: 400 });
         }
 
         const query = `
@@ -29,7 +29,7 @@ const getProductByID = async (req: Request, res: Response) => {
 
         con.query(techInfoQuery, (err, result) => {
             if (err) {
-                return res.status(400).json({ message: err.message });
+                return res.status(500).json({ message: 'Got error while executing on database', status: 500 });
             }
 
             techInfoData = result[0];
@@ -37,11 +37,11 @@ const getProductByID = async (req: Request, res: Response) => {
 
         con.query(query, (err, result) => {
             if (err) {
-                return res.status(400).json({ message: err.message });
+                return res.status(500).json({ message: 'Got error while executing on database', status: 500 });
             }
 
             if (result.length === 0) {
-                return res.status(404).json({ message: 'Product not found' });
+                return res.status(404).json({ message: 'Product not found', status: 404 });
             }
             const { imageLinks, transferState } = result[0];
             const imageLinksArray = imageLinks.split(',');

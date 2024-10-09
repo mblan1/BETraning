@@ -7,9 +7,9 @@ interface IUserService {
 }
 
 interface IUser {
-    id: number;
-    name: string;
-    email: string;
+    id?: number;
+    username: string;
+    password?: string;
     role?: {
         name: string;
         permissions: string[];

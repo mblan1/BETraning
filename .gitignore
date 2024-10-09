@@ -2,3 +2,4 @@
 /UserService/node_modules
 /ProductService/node_modules
 .env
+.gitignore

@@ -3,6 +3,7 @@ import { appDataSource } from '../config/typeorm';
 import { IMessageResponse } from '../interface/MessageResponse';
 import { IUser, IUserService } from '../interface/User';
 import { Users } from '../models/User.model';
+import { hashString, verifyHash } from '../utils/string-format';
 
 export class UserService implements IUserService {
     /**
@@ -14,7 +15,7 @@ export class UserService implements IUserService {
         const users = await appDataSource
             .getRepository(Users)
             .find({
-                relations: ['role'],
+                relations: ['role', 'role.roleWithPermission', 'role.roleWithPermission.permission'],
             })
             .catch((error) => {
                 throw new Error('Got an error while fetching users data: method getAllUsers');
@@ -29,8 +30,7 @@ export class UserService implements IUserService {
         return users.map((user) => {
             return {
                 id: user.id,
-                name: user.name,
-                email: user.email,
+                username: user.username,
                 role: {
                     name: user.role.name,
                     permissions: user.role.roleWithPermission.map((role) => {
@@ -56,10 +56,11 @@ export class UserService implements IUserService {
                 },
                 relations: ['role', 'role.roleWithPermission', 'role.roleWithPermission.permission'],
             })
-            .catch(() => {
+            .catch((err) => {
+                console.log(err);
                 throw new Error('Got an error while fetching user data: method getUser');
             });
-
+        console.log(userData);
         // check if user not found
         if (!userData) {
             return null;
@@ -68,8 +69,7 @@ export class UserService implements IUserService {
         // return user data
         return {
             id: userData.id,
-            name: userData.name,
-            email: userData.email,
+            username: userData.username,
             role: {
                 name: userData.role.name,
                 permissions: userData.role.roleWithPermission.map((role) => {
@@ -85,18 +85,18 @@ export class UserService implements IUserService {
      * @returns created user data
      * @throws error if got an error while creating user
      */
-    async createUser(user: IUser): Promise<IUser | IMessageResponse> {
+    async createUser(user: IUser): Promise<any> {
         const newUser = new Users();
-        newUser.name = user.name;
-        newUser.email = user.email;
-        newUser.roleId = user.roleId ?? ERoles.USER;
+        newUser.username = user.username;
+        newUser.password = await hashString(user.password);
+        newUser.roleId = Number(user.roleId ?? ERoles.USER);
 
         // check if user already exists
         const existedUser = await appDataSource
             .getRepository(Users)
             .findOne({
                 where: {
-                    email: user.email,
+                    username: newUser.username,
                 },
             })
             .catch(() => {
@@ -104,25 +104,47 @@ export class UserService implements IUserService {
             });
 
         if (existedUser) {
-            return {
-                message: 'User already exists',
-                status: 400,
-            };
+            throw new Error('User already exists');
         }
 
         // create new user
         const userData = await appDataSource
             .getRepository(Users)
             .save(newUser)
-            .catch(() => {
+            .catch((err) => {
+                console.error(err);
                 throw new Error('Got an error while creating user: method createUser');
             });
 
         // return created user data
         return {
+            message: 'User created successfully',
             id: userData.id,
-            name: userData.name,
-            email: userData.email,
+            username: userData.username,
+        };
+    }
+
+    async getUserByUsernameAndPassword(username: string, password: string): Promise<any> {
+        const userData = await appDataSource.getRepository(Users).findOne({
+            where: {
+                username: username,
+            },
+        });
+
+        if (!userData) {
+            throw new Error('username is incorrect');
+        }
+
+        const hashedPassword = userData.password;
+        const isPasswordMatch = await verifyHash(password, hashedPassword);
+
+        if (!isPasswordMatch) {
+            throw new Error('password is incorrect');
+        }
+
+        return {
+            id: userData.id,
+            username: userData.username,
             roleId: userData.roleId,
         };
     }

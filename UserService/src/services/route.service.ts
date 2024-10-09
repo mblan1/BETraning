@@ -9,7 +9,7 @@ export class RouteService implements IRouteService {
      *
      * @returns all routes with their permissions from database or null if no routes found
      */
-    async getAllRoutes(): Promise<IRoutePermission | null> {
+    async getAllRoutes(): Promise<any> {
         const data = await appDataSource
             .getRepository(Routes)
             .find({
@@ -24,20 +24,45 @@ export class RouteService implements IRouteService {
         if (!data) {
             return null;
         }
-        // reduce the data to get the required format
-        const modifiedData = data.reduce((acc: IRoutePermission, route) => {
+
+        return data.map((route) => {
             const permissions = route.routeWithPermissions.map((routeWithPermission) => {
                 return routeWithPermission.permission.name;
             });
-            acc[route.name] = {
+
+            return {
                 id: route.id,
+                name: route.name,
                 description: route.description,
+                method: route.method,
                 permissions: permissions,
             };
-            return acc;
-        }, {});
+        });
+    }
 
-        return modifiedData;
+    async getRouteById(routeId: number): Promise<any> {
+        const route = await appDataSource.getRepository(Routes).findOne({
+            where: {
+                id: routeId,
+            },
+            relations: ['routeWithPermissions', 'routeWithPermissions.permission'],
+        });
+
+        if (!route) {
+            return null;
+        }
+
+        const permissions = route.routeWithPermissions.map((routeWithPermission) => {
+            return routeWithPermission.permission.name;
+        });
+
+        return {
+            id: route.id,
+            name: route.name,
+            description: route.description,
+            method: route.method,
+            permissions: permissions,
+        };
     }
 
     /**
@@ -85,13 +110,13 @@ export class RouteService implements IRouteService {
      *  permissionIds: [1, 2],
      * };
      */
-    async createRouteWithPermission(route: IRouteBodyData): Promise<IRoutePermission | null> {
+    async createRouteWithPermission(route: IRouteBodyData): Promise<any> {
         const permissionArray: string[] = [];
 
         const routeData = {
             name: route.path,
             description: route.description,
-            method: route.method,
+            method: route.method.toUpperCase(),
         };
 
         // check if route already exists
@@ -157,10 +182,11 @@ export class RouteService implements IRouteService {
         }
 
         return {
-            [newRoute.name]: {
-                description: newRoute.description,
-                permissions: permissionArray,
-            },
+            id: newRoute.id,
+            name: newRoute.name,
+            description: newRoute.description,
+            method: newRoute.method,
+            permissions: permissionArray,
         };
     }
 
@@ -202,5 +228,95 @@ export class RouteService implements IRouteService {
             });
 
         return data.affected !== 0;
+    }
+
+    async updateRoute(routeData: IRouteBodyData): Promise<any> {
+        const permissionArray: string[] = [];
+        const route = await appDataSource.getRepository(Routes).findOne({
+            where: {
+                id: routeData.id,
+            },
+        });
+
+        if (!route) {
+            throw new Error('Route not found');
+        }
+
+        route.description = routeData.description;
+        route.method = routeData.method.toUpperCase();
+
+        // get all permissions
+        const permissions = await appDataSource.getRepository(Permissions).find();
+        if (permissions.length === 0) {
+            throw new Error('No permissions found');
+        }
+
+        // check if permission ids are valid
+        for (const permissionId of routeData.permissionIds) {
+            const permission = permissions.find((p) => p.id === permissionId);
+            if (!permission) {
+                throw new Error(`Permission with ID ${permissionId} not found`);
+            }
+        }
+
+        // remove route with permissions
+        const routeWithPermission = await appDataSource.getRepository(RouteWithPermission).find({
+            where: {
+                routeId: route.id,
+            },
+        });
+        if (routeWithPermission.length > 0) {
+            await appDataSource.getRepository(RouteWithPermission).delete({
+                routeId: route.id,
+            });
+        }
+
+        // Check for permissions
+        if (routeData.permissionIds.length > 0) {
+            for (const permissionId of routeData.permissionIds) {
+                const permission = await appDataSource.getRepository(Permissions).findOne({
+                    where: { id: permissionId },
+                });
+
+                // check if permission not found
+                if (!permission) {
+                    throw new Error(`Permission with ID ${permissionId} not found`);
+                }
+
+                // create the route with permission mapping
+                const routeWithPermission = {
+                    routeId: route.id,
+                    permissionId: permission.id,
+                };
+
+                const newRouteWithPermission = await appDataSource
+                    .getRepository(RouteWithPermission)
+                    .save(routeWithPermission);
+
+                // check if create not successful
+                if (!newRouteWithPermission) {
+                    throw new Error('Got issue while creating route with permission');
+                }
+
+                // add permission name to permission array
+                permissionArray.push(permission.name);
+            }
+        }
+
+        const updatedRoute = await appDataSource
+            .getRepository(Routes)
+            .save(route)
+            .catch((err) => {
+                console.log(err);
+                throw new Error('Got issue while updating route');
+            });
+
+        return {
+            id: updatedRoute.id,
+            name: updatedRoute.name,
+            description: updatedRoute.description,
+            method: updatedRoute.method,
+            permissions: permissionArray,
+        };
     }
 }

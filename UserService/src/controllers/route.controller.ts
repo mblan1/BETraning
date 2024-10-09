@@ -19,50 +19,28 @@ import { IRouteBodyData } from '../interface/RouteInterface';
  *      "permissions": ["permission1", "permission2"]
  * },
  */
-const getAllRoutesController = async (req: Request, res: Response) => {
+const getRouteController = async (req: Request, res: Response) => {
+    const id = req.query.id as string;
     try {
         const routeService = new RouteService();
-        const data = await routeService.getAllRoutes();
 
-        if (!data) {
-            res.status(STATUS_CODE.NOT_FOUND).json({ message: 'No routes found' });
+        // get route with id
+        if (id) {
+            const routeData = await routeService.getRouteById(Number(id));
+            // if route not found
+            if (!routeData) {
+                res.status(STATUS_CODE.NOT_FOUND).json({ message: 'Route not found' });
+                return;
+            }
+
+            res.status(STATUS_CODE.OK).json(routeData);
             return;
         }
 
-        res.status(STATUS_CODE.OK).json(data);
-    } catch (error) {
-        res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: (error as Error).message });
-    }
-};
-
-/**
- *
- * @param req request
- * @param res response
- * @returns  route with their permissions or a message if no route is found
- * @status 200 OK
- * @status 404 Not Found
- * @status 500 Internal Server Error
- * @example
- * GET /route?path=route1
- * {
- *   "route1": {
- *      "description": "route1 description",
- *     "permissions": ["permission1", "permission2"]
- * },
- */
-const getRouteByPathController = async (req: Request, res: Response) => {
-    const path = req.query.path as string;
-    if (!path) {
-        res.status(STATUS_CODE.BAD_REQUEST).json({ message: 'Path is required' });
-        return;
-    }
-    try {
-        const routeService = new RouteService();
-        const data = await routeService.getRouteByPath(path);
-
+        // get all routes
+        const data = await routeService.getAllRoutes();
         if (!data) {
-            res.status(STATUS_CODE.NOT_FOUND).json({ message: 'No route found' });
+            res.status(STATUS_CODE.NOT_FOUND).json({ message: 'No routes found' });
             return;
         }
 
@@ -109,7 +87,10 @@ const createRouteController = async (req: Request, res: Response) => {
             return;
         }
 
-        res.status(STATUS_CODE.CREATED).json(data);
+        res.status(STATUS_CODE.CREATED).json({
+            message: 'Route created successfully',
+            data: data,
+        });
     } catch (error) {
         res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: (error as Error).message });
     }
@@ -135,7 +116,7 @@ const removeRouteController = async (req: Request, res: Response) => {
         const data = await routeService.removeRoute(Number(req.params.id));
 
         if (!data) {
-            res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: 'Route not deleted' });
+            res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: 'Route not found' });
             return;
         }
 
@@ -144,4 +125,34 @@ const removeRouteController = async (req: Request, res: Response) => {
         res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: (error as Error).message });
     }
 };
-export { getAllRoutesController, getRouteByPathController, createRouteController, removeRouteController };
+
+const updateRouteController = async (req: Request, res: Response) => {
+    const { id, description, permissionIds } = req.body as IRouteBodyData;
+    if (!description || !permissionIds || !id) {
+        res.status(STATUS_CODE.BAD_REQUEST).json({ message: 'id, description and permissionIds are required' });
+        return;
+    }
+
+    if (!Array.isArray(permissionIds)) {
+        res.status(STATUS_CODE.BAD_REQUEST).json({ message: 'Permission Ids should be an array' });
+        return;
+    }
+    try {
+        const routeService = new RouteService();
+        const data = await routeService.updateRoute(req.body);
+
+        if (!data) {
+            res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: 'Route not updated' });
+            return;
+        }
+
+        res.status(STATUS_CODE.CREATED).json({
+            message: 'Route updated successfully',
+            data: data,
+        });
+    } catch (error) {
+        res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: (error as Error).message });
+    }
+};
+
+export { getRouteController, createRouteController, removeRouteController, updateRouteController };

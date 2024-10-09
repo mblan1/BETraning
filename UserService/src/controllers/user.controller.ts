@@ -43,7 +43,10 @@ const getUserByIDController = async (req: Request, res: Response) => {
         const userData = await userService.getUserByID(idFormat);
         res.status(STATUS_CODE.OK).json(userData);
     } catch (error) {
-        res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: error });
+        console.log(error);
+        res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({
+            message: (error as Error).message || 'An unexpected error occurred while getting user by ID',
+        });
     }
 };
 
@@ -61,15 +64,15 @@ const getUserByIDController = async (req: Request, res: Response) => {
  *  token: 'token' }
  */
 const signInController = async (req: Request, res: Response) => {
-    const { userId } = req.body;
-    if (!userId) {
-        res.status(STATUS_CODE.BAD_REQUEST).json({ message: 'User ID is required' });
+    const { username, password } = req.body;
+    if (!username || !password) {
+        res.status(STATUS_CODE.BAD_REQUEST).json({ message: 'username or password is incorrect' });
         return;
     }
 
     try {
         const userService = new UserService();
-        const user = await userService.getUserByID(userId);
+        const user = await userService.getUserByUsernameAndPassword(username, password);
         // if user not found
         if (!user) {
             res.status(STATUS_CODE.BAD_REQUEST).json({ message: 'User not found' });
@@ -85,13 +88,16 @@ const signInController = async (req: Request, res: Response) => {
             });
             return;
         }
-        const token = jwt.sign({ sub: userId }, secretKey, {
+        const token = jwt.sign({ sub: user.id }, secretKey, {
             expiresIn: convertToNumber(expiredTime),
         });
 
         // return user data and token
         res.status(STATUS_CODE.OK).json({
-            user,
+            user: {
+                id: user.id,
+                username: user.username,
+            },
             token,
         });
     } catch (error) {
@@ -101,4 +107,46 @@ const signInController = async (req: Request, res: Response) => {
     }
 };
 
-export { getUserByIDController, signInController };
+const createUserController = async (req: Request, res: Response) => {
+    const { username, password, roleId } = req.body;
+    if (!username || !password) {
+        res.status(STATUS_CODE.BAD_REQUEST).json({ message: 'username, password is required' });
+        return;
+    }
+
+    try {
+        const userService = new UserService();
+        const user = await userService.createUser({ username, password, roleId });
+        res.status(STATUS_CODE.CREATED).json(user);
+    } catch (error) {
+        console.log(error);
+        res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({
+            message: (error as Error).message || 'An unexpected error occurred while creating user',
+        });
+    }
+};
+
+const getUserByUsernameController = async (req: Request, res: Response) => {
+    const { username, password } = req.body;
+    if (!username || !password) {
+        res.status(STATUS_CODE.BAD_REQUEST).json({ message: 'username or password is required' });
+        return;
+    }
+
+    try {
+        const userService = new UserService();
+        const user = await userService.getUserByUsernameAndPassword(username, password);
+        if (!user) {
+            res.status(STATUS_CODE.NOT_FOUND).json({ message: 'User not found' });
+            return;
+        }
+        res.status(STATUS_CODE.OK).json(user);
+    } catch (error) {
+        console.error(error);
+        res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({
+            message: (error as Error).message || 'An unexpected error occurred while getting user by username',
+        });
+    }
+};
+
+export { getUserByIDController, signInController, createUserController, getUserByUsernameController };

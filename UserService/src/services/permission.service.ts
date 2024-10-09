@@ -33,9 +33,20 @@ export class PermissionsService implements IPermissionsService {
      *    description: 'permission description',
      * };
      */
-    async addPermission(permission: IPermission): Promise<IPermission | null> {
+    async addPermission(permission: IPermission): Promise<any> {
         // Add a new permission to the database
-        permission.name = permission.name.toUpperCase();
+        permission.name = permission.name.toUpperCase().replace(/ /g, '_');
+
+        const isPermissionExist = await appDataSource.getRepository(Permissions).findOne({
+            where: {
+                name: permission.name,
+            },
+        });
+
+        if (isPermissionExist) {
+            throw new Error('Permission already exist');
+        }
+
         const data = await appDataSource
             .getRepository(Permissions)
             .save(permission)
@@ -43,7 +54,10 @@ export class PermissionsService implements IPermissionsService {
                 throw new Error('Got issue while adding permission at addPermission');
             });
 
-        return data;
+        return {
+            message: 'Permission added successfully',
+            data,
+        };
     }
 
     /**

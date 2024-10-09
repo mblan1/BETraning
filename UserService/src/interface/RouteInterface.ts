@@ -21,6 +21,7 @@ interface IRoutePermission {
 }
 
 interface IRouteBodyData {
+    id?: number;
     path: string;
     description: string;
     method: string;

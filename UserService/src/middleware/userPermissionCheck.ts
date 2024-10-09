@@ -22,10 +22,9 @@ const userPermissionCheck = async (req: Request, res: Response, next: NextFuncti
     // Get route data
     const routeData = await routeService.getRouteByPath(routePath);
     if (!routeData) {
-        res.status(STATUS_CODE.NOT_FOUND).json({ message: 'This route not exist in database' });
+        res.status(STATUS_CODE.NOT_FOUND).json({ message: `${routePath} is not exist in database` });
         return;
     }
-
     // get permissions of route and user
     const routePermissions = routeData[routePath].permissions;
     const userPermissions = userData.role?.permissions;

@@ -7,10 +7,10 @@ export class Users {
     id: number;
 
     @Column({ type: 'varchar', length: 50 })
-    name: string;
+    username: string;
 
-    @Column({ type: 'varchar', length: 50 })
-    email: string;
+    @Column({ type: 'text' })
+    password: string;
 
     @Column({ type: 'int' })
     roleId: number;

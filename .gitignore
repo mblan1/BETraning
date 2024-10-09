@@ -1,0 +1,4 @@
+/APIGateway/node_modules
+/UserService/node_modules
+/ProductService/node_modules
+.env
